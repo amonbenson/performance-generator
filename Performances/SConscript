@@ -1,0 +1,62 @@
+from SCons.Script import *
+from SCons.Node.FS import File
+from SCons.Node.Python import Value
+import os
+import yaml
+
+env: Environment = Environment()
+Import("env")
+
+# read all performance json files
+performance_files = env.Glob("*/*/performance.yaml")
+performance_pdfs = []
+performance_targets = []
+
+for info_scons in performance_files:
+    # load the info yaml
+    info_filename = str(info_scons)
+    with open(info_filename, "r") as f:
+        info = yaml.safe_load(f)
+
+    performance_dir = os.path.dirname(info_filename)
+    sources = []
+    watermarks = []
+
+    # get the cover image
+    if "cover" in info:
+        cover_pdf = env.File(os.path.join(performance_dir, info["cover"]))
+        cover_docx = env.ReplaceExt(cover_pdf, ".pdf", ".docx")
+
+        # either generate the pdf from a docx file or use an existing pdf directly
+        if cover_docx.exists():
+            cover_target = env.Docx2Pdf(cover_docx)
+        else:
+            cover_target = cover_pdf
+
+        sources.append(cover_target)
+        watermarks.append(None)
+
+    # gather all songs
+    for song in info["songs"]:
+        nr = song.get("nr", "Missingno.")
+        name = song.get("name", "Unknown")
+        file = env.File("#" + os.path.join("Songs", song.get("file", os.path.join(name, f"{name}.pdf"))))
+
+        if file.exists():
+            sources.append(file)
+            watermarks.append({ "nr": nr })
+        else:
+            sources.append(Value(None))
+            watermarks.append({ "nr": nr, "title": name })
+
+    # get the output filename
+    performance_pdf = env.File(os.path.join(performance_dir, info["target"]))
+    performance_pdfs.append(performance_pdf)
+
+    # generate the performance target
+    target = env.PdfMerge(performance_pdf, sources, WATERMARKS=watermarks)
+    performance_targets.append(target)
+
+
+# alias to build all performances
+env.Alias("performances", performance_targets)

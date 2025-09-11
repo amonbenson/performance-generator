@@ -1,0 +1,19 @@
+from SCons.Script import *
+
+env: Environment = Environment()
+Import("env")
+
+# list all Word documents and generate the pdf filenames
+docxs = env.Glob("*/*.docx")
+pdfs = [env.ReplaceExt(docx, ".docx", ".pdf") for docx in docxs]
+
+# build the target pdf files
+for docx, pdf in zip(docxs, pdfs):
+    # generate the pdf from the word document
+    env.Docx2Pdf(pdf, docx)
+
+    # keep pdf from beeing deleted by scons, so the annotations can be kept
+    env.Precious(pdf)
+
+# alias to build all pdfs
+env.Alias("songs", pdfs)

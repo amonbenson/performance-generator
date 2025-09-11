@@ -1,0 +1,11 @@
+# ignore everything by default
+*
+!.gitignore
+
+!SConstruct
+
+!/Songs/
+!/Songs/SConscript
+
+!/Performances/
+!/Performances/SConscript

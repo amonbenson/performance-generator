@@ -121,3 +121,6 @@ env.AddMethod(replace_ext, "ReplaceExt")
 # include all script files
 SConscript("Songs/SConscript", exports="env")
 SConscript("Performances/SConscript", exports="env")
+
+# specify default alias targets
+env.Default("songs", "performances")

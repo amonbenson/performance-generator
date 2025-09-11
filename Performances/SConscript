@@ -47,7 +47,7 @@ for info_scons in performance_files:
             watermarks.append({ "nr": nr })
         else:
             sources.append(Value(None))
-            watermarks.append({ "nr": nr, "title": name })
+            watermarks.append({ "nr": nr, "title": f"Missing: {file.name}" })
 
     # get the output filename
     performance_pdf = env.File(os.path.join(performance_dir, info["target"]))

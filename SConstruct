@@ -64,8 +64,8 @@ def pdf_merge_action(target: list[File], source: list[File], env: Environment):
 
             if "nr" in watermark:
                 annotation = pypdf.annotations.FreeText(
-                    text=watermark["nr"],
-                    rect=(page.mediabox.width - 50, page.mediabox.height - 50, page.mediabox.width - 20, page.mediabox.height - 20),
+                    text="#" + str(watermark["nr"]),
+                    rect=(page.mediabox.width - 100, page.mediabox.height - 50, page.mediabox.width - 20, page.mediabox.height - 20),
                     font="Arial",
                     bold=True,
                     font_size="24pt",

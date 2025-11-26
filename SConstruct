@@ -115,7 +115,7 @@ env.Append(
 )
 
 def replace_ext(env, f, old_ext, new_ext):
-    return env.File(str(f).rstrip(old_ext) + new_ext)
+    return env.File(str(f).rsplit(old_ext, 1)[0] + new_ext)
 env.AddMethod(replace_ext, "ReplaceExt")
 
 # include all script files

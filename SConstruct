@@ -1,10 +1,13 @@
 from SCons.Script import *
 from SCons.Node.FS import File
 from SCons.Errors import UserError
+
 import os
+import io
 import pypdf
 import pypdf.generic
 import pypdf.annotations
+import fpdf
 import itertools
 
 def pdf_move_keep_annotations(target: File, source: File, env: Environment):
@@ -59,34 +62,28 @@ def pdf_merge_action(target: list[File], source: list[File], env: Environment):
             merger.add_blank_page()
 
         # add the watermarks
-        if watermark:
+        if watermark and False: # disable watermarking for now
+            # get the target page that the watermark should be applied to
             page = merger.get_page(starting_page)
 
+            # create an overlay page to draw onto
+            unit = "mm"
+            k = fpdf.get_scale_factor(unit)
+            format = (page.mediabox[2] / k, page.mediabox[3] / k)
+            overlay = fpdf.FPDF(format=format, unit=unit)
+            overlay.add_page()
+
             if "nr" in watermark:
-                annotation = pypdf.annotations.FreeText(
-                    text="#" + str(watermark["nr"]),
-                    rect=(page.mediabox.width - 100, page.mediabox.height - 50, page.mediabox.width - 20, page.mediabox.height - 20),
-                    font="Arial",
-                    bold=True,
-                    font_size="24pt",
-                    font_color="000000",
-                    border_color=None,
-                    background_color=None,
-                )
-                merger.add_annotation(starting_page, annotation)
+                overlay.set_font("Arial", style="B", size=24)
+                overlay.text(50, 150, "#" + str(watermark["nr"]))
 
             if "title" in watermark:
-                annotation = pypdf.annotations.FreeText(
-                    text=watermark["title"],
-                    rect=(20, page.mediabox.height - 50, 500, page.mediabox.height - 20),
-                    font="Arial",
-                    bold=True,
-                    font_size="24pt",
-                    font_color="000000",
-                    border_color=None,
-                    background_color=None,
-                )
-                merger.add_annotation(starting_page, annotation)
+                overlay.set_font("Arial", style="B", size=24)
+                overlay.text(50, 250, str(watermark["title"]))
+
+            # apply the overlay using pypdf
+            overlay_pypdf = pypdf.PdfReader(io.BytesIO(overlay.output())).pages[0]
+            merger.pages[starting_page].merge_page(page2=overlay_pypdf)
 
     # write the target file
     with open(str(target[0]), "wb") as f:

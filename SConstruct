@@ -7,8 +7,9 @@ import io
 import pypdf
 import pypdf.generic
 import pypdf.annotations
-import fpdf
 import itertools
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
 
 def pdf_move_keep_annotations(target: File, source: File, env: Environment):
     # if the target does not exist, copy the source directly
@@ -62,28 +63,40 @@ def pdf_merge_action(target: list[File], source: list[File], env: Environment):
             merger.add_blank_page()
 
         # add the watermarks
-        if watermark and False: # disable watermarking for now
+        if watermark:
             # get the target page that the watermark should be applied to
-            page = merger.get_page(starting_page)
+            page = merger.pages[starting_page]
 
-            # create an overlay page to draw onto
-            unit = "mm"
-            k = fpdf.get_scale_factor(unit)
-            format = (page.mediabox[2] / k, page.mediabox[3] / k)
-            overlay = fpdf.FPDF(format=format, unit=unit)
-            overlay.add_page()
+            # get page dimensions
+            page_width = float(page.mediabox.width)
+            page_height = float(page.mediabox.height)
 
+            # create an overlay page using ReportLab
+            packet = io.BytesIO()
+            c = canvas.Canvas(packet, pagesize=(page_width, page_height))
+
+            # set font for watermarks
+            c.setFont("Helvetica-Bold", 24)
+
+            # add "nr" on the top right
             if "nr" in watermark:
-                overlay.set_font("Arial", style="B", size=24)
-                overlay.text(50, 150, "#" + str(watermark["nr"]))
+                nr_text = "#" + str(watermark["nr"])
+                text_width = c.stringWidth(nr_text, "Helvetica-Bold", 24)
+                # position: 10 points from right edge, 10 points from top
+                c.drawString(page_width - text_width - 10, page_height - 34, nr_text)
 
+            # add "title" on the top left
             if "title" in watermark:
-                overlay.set_font("Arial", style="B", size=24)
-                overlay.text(50, 250, str(watermark["title"]))
+                title_text = str(watermark["title"])
+                # position: 10 points from left edge, 10 points from top
+                c.drawString(10, page_height - 34, title_text)
 
-            # apply the overlay using pypdf
-            overlay_pypdf = pypdf.PdfReader(io.BytesIO(overlay.output())).pages[0]
-            merger.pages[starting_page].merge_page(page2=overlay_pypdf)
+            c.save()
+
+            # merge the overlay with the page
+            packet.seek(0)
+            overlay_pdf = pypdf.PdfReader(packet)
+            page.merge_page(overlay_pdf.pages[0])
 
     # write the target file
     with open(str(target[0]), "wb") as f:

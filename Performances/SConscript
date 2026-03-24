@@ -37,8 +37,14 @@ for info_scons in performance_files:
         watermarks.append(None)
 
     # gather all songs
+    auto_nr = 0
     for song in info["songs"]:
-        nr = song.get("nr", "Missingno.")
+        if isinstance(song, str):
+            song = {"name": song}
+        auto_nr += 1
+        nr = song.get("nr", auto_nr)
+        if isinstance(nr, int):
+            auto_nr = nr
         name = song.get("name", "Unknown")
         file = env.File("#" + os.path.join("Songs", song.get("file", os.path.join(name, f"{name}.pdf"))))
 
